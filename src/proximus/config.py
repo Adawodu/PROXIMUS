@@ -1,0 +1,58 @@
+"""Configuration management using pydantic-settings."""
+
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # LiveKit
+    livekit_url: str = "wss://localhost:7880"
+    livekit_api_key: str = ""
+    livekit_api_secret: SecretStr = SecretStr("")
+
+    # Telnyx
+    telnyx_api_key: SecretStr = SecretStr("")
+    telnyx_sip_uri: str = ""
+    telnyx_sip_username: str = ""
+    telnyx_sip_password: SecretStr = SecretStr("")
+    telnyx_phone_number: str = ""  # Your Telnyx phone number (E.164 format)
+
+    # SIP/Agent Configuration
+    agent_name: str = "proximus-agent"
+    room_prefix: str = "proximus-call-"
+    outbound_trunk_id: str = ""  # LiveKit SIP outbound trunk ID
+
+    # AI Providers
+    anthropic_api_key: SecretStr = SecretStr("")
+    openai_api_key: SecretStr = SecretStr("")
+    ai_provider: Literal["anthropic", "openai"] = "anthropic"
+
+    # Speech Services
+    deepgram_api_key: SecretStr = SecretStr("")
+    cartesia_api_key: SecretStr = SecretStr("")
+
+    # API Server
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+
+    # Logging
+    log_level: str = "INFO"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
