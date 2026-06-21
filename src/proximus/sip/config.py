@@ -40,8 +40,8 @@ class DispatchRuleConfig:
 # Telnyx IP ranges for SIP (for trunk allowed_addresses)
 # See: https://support.telnyx.com/en/articles/4455513-telnyx-sip-signaling-ip-addresses
 TELNYX_SIP_IPS = [
-    "54.172.60.0/23",   # US East
-    "54.244.51.0/24",   # US West
+    "54.172.60.0/23",  # US East
+    "54.244.51.0/24",  # US West
     "52.215.127.0/24",  # EU
 ]
 
@@ -166,7 +166,7 @@ def generate_setup_instructions() -> str:
 
 ## Prerequisites
 - LiveKit Cloud account or self-hosted LiveKit with SIP enabled
-- Telnyx account with phone number: {settings.telnyx_phone_number or '<not configured>'}
+- Telnyx account with phone number: {settings.telnyx_phone_number or "<not configured>"}
 - livekit-cli installed: `brew install livekit-cli` or `go install github.com/livekit/livekit-cli/cmd/livekit-cli@latest`
 
 ## Step 1: Configure LiveKit CLI
@@ -200,13 +200,13 @@ Replace `<TRUNK_ID>` with the ID from Step 2:
 
 1. Go to Real-Time Communications → Voice → SIP Trunking
 2. Create new FQDN connection:
-   - FQDN: `{settings.telnyx_sip_uri or '<your-livekit-sip-uri>'}`
+   - FQDN: `{settings.telnyx_sip_uri or "<your-livekit-sip-uri>"}`
    - Port: 5060
    - Transport: TCP (recommended)
 
 3. Configure Authentication:
    - Method: Credentials
-   - Username: `{settings.telnyx_sip_username or '<your-username>'}`
+   - Username: `{settings.telnyx_sip_username or "<your-username>"}`
    - Password: (your password)
 
 4. Link your phone number to this SIP connection

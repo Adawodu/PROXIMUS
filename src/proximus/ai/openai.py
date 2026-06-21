@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import openai
 
-from proximus.ai.base import AIProvider, Message, Role
+from proximus.ai.base import AIProvider, Message
 
 
 class OpenAIProvider(AIProvider):

@@ -58,13 +58,17 @@ def cmd_config(args: argparse.Namespace) -> int:
     print("LiveKit:")
     print(f"  URL: {settings.livekit_url}")
     print(f"  API Key: {settings.livekit_api_key or '(not set)'}")
-    print(f"  API Secret: {'*' * 8 if settings.livekit_api_secret.get_secret_value() else '(not set)'}")
+    print(
+        f"  API Secret: {'*' * 8 if settings.livekit_api_secret.get_secret_value() else '(not set)'}"
+    )
     print()
     print("Telnyx:")
     print(f"  API Key: {'*' * 8 if settings.telnyx_api_key.get_secret_value() else '(not set)'}")
     print(f"  SIP URI: {settings.telnyx_sip_uri or '(not set)'}")
     print(f"  SIP Username: {settings.telnyx_sip_username or '(not set)'}")
-    print(f"  SIP Password: {'*' * 8 if settings.telnyx_sip_password.get_secret_value() else '(not set)'}")
+    print(
+        f"  SIP Password: {'*' * 8 if settings.telnyx_sip_password.get_secret_value() else '(not set)'}"
+    )
     print(f"  Phone Number: {settings.telnyx_phone_number or '(not set)'}")
     print()
     print("Agent:")
@@ -73,12 +77,18 @@ def cmd_config(args: argparse.Namespace) -> int:
     print()
     print("AI Provider:")
     print(f"  Provider: {settings.ai_provider}")
-    print(f"  Anthropic Key: {'*' * 8 if settings.anthropic_api_key.get_secret_value() else '(not set)'}")
+    print(
+        f"  Anthropic Key: {'*' * 8 if settings.anthropic_api_key.get_secret_value() else '(not set)'}"
+    )
     print(f"  OpenAI Key: {'*' * 8 if settings.openai_api_key.get_secret_value() else '(not set)'}")
     print()
     print("Speech Services:")
-    print(f"  Deepgram Key: {'*' * 8 if settings.deepgram_api_key.get_secret_value() else '(not set)'}")
-    print(f"  Cartesia Key: {'*' * 8 if settings.cartesia_api_key.get_secret_value() else '(not set)'}")
+    print(
+        f"  Deepgram Key: {'*' * 8 if settings.deepgram_api_key.get_secret_value() else '(not set)'}"
+    )
+    print(
+        f"  Cartesia Key: {'*' * 8 if settings.cartesia_api_key.get_secret_value() else '(not set)'}"
+    )
 
     return 0
 
@@ -86,8 +96,7 @@ def cmd_config(args: argparse.Namespace) -> int:
 def run_cli() -> int:
     """Run the SIP CLI with subcommands."""
     parser = argparse.ArgumentParser(
-        prog="proximus sip",
-        description="PROXIMUS SIP/Telnyx configuration commands"
+        prog="proximus sip", description="PROXIMUS SIP/Telnyx configuration commands"
     )
     subparsers = parser.add_subparsers(dest="subcommand", help="Available commands")
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import anthropic
 
@@ -22,9 +22,7 @@ class AnthropicProvider(AIProvider):
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
         self.model = model
 
-    def _convert_messages(
-        self, messages: list[Message]
-    ) -> list[dict[str, str]]:
+    def _convert_messages(self, messages: list[Message]) -> list[dict[str, str]]:
         """Convert messages to Anthropic format."""
         return [
             {"role": "user" if msg.role == Role.USER else "assistant", "content": msg.content}

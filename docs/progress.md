@@ -44,9 +44,20 @@
 - **Payment / billing** — No paywall or usage tracking
 - **Call recording playback** — Requires LiveKit Cloud recording plan
 - **Analytics** — No call duration stats, success rates, or usage dashboards
-- **Testing** — No unit or integration tests
+- **Deeper test coverage** — Pure-logic units are covered (resume, calls, config);
+  API routes and the agent pipeline are not yet tested
+- **Strict typing** — `mypy` runs non-blocking in CI; tightening to strict is a
+  tracked good-first-issue
+
+## Open-Source Readiness
+- License: MIT (`LICENSE`)
+- Governance: `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `RESPONSIBLE_USE.md`
+- CI: GitHub Actions runs ruff + pytest (blocking) and mypy (non-blocking) for the
+  backend, and eslint + build for the web dashboard
+- Tests: `tests/` covers resume parsing, phone linking, call records, and config
+- Removed hardcoded Telnyx credential-connection ID → `TELNYX_CREDENTIAL_CONNECTION_ID`
+- README reframed: voice-agent reference implementation + personal screening assistant
 
 ## Repo
-- GitHub: https://github.com/Adawodu/PROXIMUS (private)
+- GitHub: https://github.com/Adawodu/PROXIMUS
 - Branch: `main`
-- 64 files, initial commit

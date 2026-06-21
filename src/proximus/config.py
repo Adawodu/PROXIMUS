@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     telnyx_sip_username: str = ""
     telnyx_sip_password: SecretStr = SecretStr("")
     telnyx_phone_number: str = ""  # Your Telnyx phone number (E.164 format)
+    telnyx_credential_connection_id: str = (
+        ""  # Telnyx credential connection ID (for caller ID / ANI override)
+    )
 
     # SIP/Agent Configuration
     agent_name: str = "proximus-agent"

@@ -5,6 +5,14 @@ import { listResumes, makeOutboundCall, getListenToken } from '../../services/ap
 
 type CallPhase = 'setup' | 'dialing' | 'connected' | 'ended' | 'error';
 
+// Decorative "audio visualizer" bars. Computed once at module load so renders
+// stay pure (no Math.random() during render).
+const VISUALIZER_BARS = [...Array(12)].map((_, i) => ({
+  height: 20 + Math.random() * 80,
+  animationDelay: i * 0.1,
+  animationDuration: 0.6 + Math.random() * 0.6,
+}));
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -292,14 +300,14 @@ export function OutboundCallModal({ open, onClose }: Props) {
               {/* Audio visualizer placeholder */}
               <div className="flex items-center justify-center py-6">
                 <div className="flex items-end gap-1 h-12">
-                  {[...Array(12)].map((_, i) => (
+                  {VISUALIZER_BARS.map((bar, i) => (
                     <div
                       key={i}
                       className="w-1.5 bg-emerald-500 rounded-full animate-pulse"
                       style={{
-                        height: `${20 + Math.random() * 80}%`,
-                        animationDelay: `${i * 0.1}s`,
-                        animationDuration: `${0.6 + Math.random() * 0.6}s`,
+                        height: `${bar.height}%`,
+                        animationDelay: `${bar.animationDelay}s`,
+                        animationDuration: `${bar.animationDuration}s`,
                       }}
                     />
                   ))}

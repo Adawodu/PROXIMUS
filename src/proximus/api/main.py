@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncIterator
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -192,7 +192,9 @@ def resume_to_response(resume: Resume) -> ResumeResponse:
         candidate_name=resume.candidate_name,
         file_path=resume.file_path,
         created_at=resume.created_at,
-        content_preview=resume.content[:500] + "..." if len(resume.content) > 500 else resume.content,
+        content_preview=resume.content[:500] + "..."
+        if len(resume.content) > 500
+        else resume.content,
     )
 
 
@@ -270,7 +272,7 @@ async def upload_resume(
     except Exception as e:
         # Clean up temp file on error
         Path(tmp_path).unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.delete("/resumes/{resume_id}")
@@ -326,7 +328,7 @@ async def create_phone_link(request: PhoneLinkRequest) -> PhoneLinkResponse:
     try:
         manager.link_phone(request.phone, request.resume_id)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     normalized_phone = manager.normalize_phone(request.phone)
 
@@ -474,11 +476,23 @@ async def make_outbound_call(request: OutboundCallRequest) -> OutboundCallRespon
         import httpx
 
         settings = get_settings()
+        connection_id = settings.telnyx_credential_connection_id
+        if not connection_id:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "caller_id override requires TELNYX_CREDENTIAL_CONNECTION_ID to be set in .env"
+                ),
+            )
         async with httpx.AsyncClient() as client:
             await client.patch(
-                "https://api.telnyx.com/v2/credential_connections/2881873291818042690",
-                headers={"Authorization": f"Bearer KEY{settings.telnyx_api_key.get_secret_value()}"},
-                json={"outbound": {"ani_override": request.caller_id, "ani_override_type": "always"}},
+                f"https://api.telnyx.com/v2/credential_connections/{connection_id}",
+                headers={
+                    "Authorization": f"Bearer KEY{settings.telnyx_api_key.get_secret_value()}"
+                },
+                json={
+                    "outbound": {"ani_override": request.caller_id, "ani_override_type": "always"}
+                },
             )
 
     try:
@@ -486,9 +500,9 @@ async def make_outbound_call(request: OutboundCallRequest) -> OutboundCallRespon
             request.phone, request.resume_id, request.caller_id, request.job_detail
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initiate call: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to initiate call: {e}") from e
 
     return OutboundCallResponse(**result)
 

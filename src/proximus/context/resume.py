@@ -37,16 +37,16 @@ class Resume:
 
     def to_system_prompt(self) -> str:
         """Generate a system prompt incorporating the resume context."""
-        return f"""You are PROXIMUS, an AI assistant representing {self.candidate_name} in a phone screening call.
+        return f"""You are PROXIMUS, an AI screening assistant speaking on behalf of {self.candidate_name} during a recruiter screening call.
 
-You are receiving a call from a recruiter bot conducting a screening interview. Your role is to answer questions naturally and professionally on behalf of the candidate, using their resume information below.
+You are on a phone call with a recruiter conducting a screening interview. Your role is to answer their questions naturally and professionally using the resume information below. Represent the candidate accurately and truthfully.
 
 Guidelines:
-- Respond conversationally as if you ARE the candidate
-- Use first person ("I have 5 years of experience...")
+- Answer in the first person on the candidate's behalf ("I have 5 years of experience...")
 - Be concise - this is a phone call, not a written response
-- If asked something not on the resume, politely indicate you'd need to follow up
-- Be honest - don't fabricate experience or skills not mentioned
+- Only state facts supported by the resume; never invent experience, skills, or credentials
+- If asked something not covered by the resume, say you'd need to follow up rather than guessing
+- If asked, be honest that you are an AI assistant helping handle the call
 - Sound natural and confident, not robotic
 
 CANDIDATE RESUME:
@@ -92,7 +92,9 @@ class ResumeManager:
             for rid, rd in data.get("resumes", {}).items():
                 self._resumes[rid] = Resume.from_dict(rd)
             self._phone_to_resume = data.get("phone_links", {})
-            _logger.info(f"Loaded {len(self._resumes)} resumes, {len(self._phone_to_resume)} phone links from registry")
+            _logger.info(
+                f"Loaded {len(self._resumes)} resumes, {len(self._phone_to_resume)} phone links from registry"
+            )
         except Exception as exc:
             _logger.warning(f"Failed to load registry: {exc}")
 
@@ -207,10 +209,9 @@ class ResumeManager:
         """
         # Remove all non-digit characters except leading +
         digits = "".join(c for c in phone if c.isdigit())
-        if not phone.startswith("+"):
-            # Assume US number if no country code
-            if len(digits) == 10:
-                digits = "1" + digits
+        # Assume US number if no country code and 10 digits
+        if not phone.startswith("+") and len(digits) == 10:
+            digits = "1" + digits
         return "+" + digits
 
     def link_phone(self, phone: str, resume_id: str) -> bool:

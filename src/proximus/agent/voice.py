@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from livekit import agents, rtc
-from livekit.agents import Agent, AgentSession, AgentServer, room_io
+from livekit.agents import Agent, AgentServer, AgentSession, room_io
 from livekit.plugins import anthropic, cartesia, deepgram, openai, silero
 
 from proximus.config import get_settings
@@ -73,12 +73,12 @@ def extract_caller_phone(participant: rtc.RemoteParticipant) -> str | None:
 class CandidateAgent(Agent):
     """Agent that represents a candidate in a screening call."""
 
-    def __init__(self, resume: Resume, direction: str = "inbound", job_detail: str | None = None) -> None:
+    def __init__(
+        self, resume: Resume, direction: str = "inbound", job_detail: str | None = None
+    ) -> None:
         instructions = resume.to_system_prompt()
         if job_detail:
-            instructions += (
-                f"\n\nJOB CONTEXT: The following is the job you are discussing on this call:\n{job_detail}"
-            )
+            instructions += f"\n\nJOB CONTEXT: The following is the job you are discussing on this call:\n{job_detail}"
         instructions += (
             "\n\nCRITICAL RESPONSE RULES: "
             "Keep every response to 2-3 sentences maximum. Be conversational and concise. "
@@ -217,11 +217,13 @@ async def handle_call(ctx: agents.JobContext):
         if not text or not text.strip():
             return
         role = "agent" if item.role == "assistant" else "user"
-        transcript.append(CallTranscriptEntry(
-            role=role,
-            text=text.strip(),
-            timestamp=time.time(),
-        ))
+        transcript.append(
+            CallTranscriptEntry(
+                role=role,
+                text=text.strip(),
+                timestamp=time.time(),
+            )
+        )
         logger.debug(f"[transcript] {role}: {text.strip()}")
 
     @session.on("close")
@@ -232,9 +234,13 @@ async def handle_call(ctx: agents.JobContext):
         logger.info(f"Call ended, saved transcript with {len(transcript)} turns: {call_record.id}")
 
     # Start the session — for outbound, only link to SIP participants (not browser listeners)
-    input_opts = room_io.RoomInputOptions(
-        participant_kinds=[rtc.ParticipantKind.PARTICIPANT_KIND_SIP],
-    ) if direction == "outbound" else None
+    input_opts = (
+        room_io.RoomInputOptions(
+            participant_kinds=[rtc.ParticipantKind.PARTICIPANT_KIND_SIP],
+        )
+        if direction == "outbound"
+        else None
+    )
 
     start_kwargs = dict(
         room=ctx.room,
@@ -248,9 +254,10 @@ async def handle_call(ctx: agents.JobContext):
 
     if direction == "outbound":
         # Wait for SIP participant before speaking
-        for i in range(15):
+        for _ in range(15):
             sip_parts = [
-                p for p in ctx.room.remote_participants.values()
+                p
+                for p in ctx.room.remote_participants.values()
                 if p.kind == rtc.ParticipantKind.PARTICIPANT_KIND_SIP
             ]
             if sip_parts:
