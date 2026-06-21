@@ -1,3 +1,13 @@
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="PROXIMUS — open-source real-time AI voice agent" width="100%" />
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-22d3ee.svg"></a>
+  <a href="https://github.com/Adawodu/PROXIMUS/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Adawodu/PROXIMUS/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-3776AB.svg">
+</p>
+
 # PROXIMUS
 
 > An open-source reference implementation of a real-time AI voice agent — built
@@ -37,6 +47,13 @@ agent.
 - **Transcripts** — Every call's turns are captured and saved
 - **Web dashboard** — React + TypeScript UI for resumes, phone links, call
   history, and outbound dialing
+
+## Demo
+
+See a [sample screening-call transcript](docs/demo-transcript.md) for how the agent
+sounds — concise, first-person, and truthful (it defers instead of fabricating).
+Your own calls are captured automatically and viewable in the dashboard's
+**Call History**.
 
 ## Architecture
 
