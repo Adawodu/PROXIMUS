@@ -34,11 +34,16 @@ async def initiate_outbound_call(
     """
     settings = get_settings()
 
+# AFTER:
     if not settings.outbound_trunk_id:
+        provider = settings.sip_provider
+        if provider == "twilio":
+            hint = "proximus sip trunk-outbound --provider twilio"
+        else:
+            hint = "proximus sip trunk-outbound --provider telnyx"
         raise ValueError(
             "Outbound SIP trunk not configured. "
-            "Set OUTBOUND_TRUNK_ID in .env after creating a trunk with: "
-            "lk sip outbound create --name 'Telnyx Outbound' --address sip.telnyx.com"
+            f"Set OUTBOUND_TRUNK_ID in .env after creating a trunk with: {hint}"
         )
 
     room_name = f"proximus-outbound-{uuid.uuid4().hex[:12]}"

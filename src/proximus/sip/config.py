@@ -46,6 +46,18 @@ TELNYX_SIP_IPS = [
 ]
 
 
+# Twilio Elastic SIP Trunking IP ranges (signaling)
+# See: https://www.twilio.com/docs/sip-trunking/ip-addresses
+TWILIO_SIP_IPS = [
+    "54.172.60.0/23",     # Twilio US East
+    "54.244.51.0/24",     # Twilio US West
+    "54.171.127.192/26",  # Twilio EU (Ireland)
+    "35.156.191.128/25",  # Twilio EU (Frankfurt)
+    "54.65.63.192/26",    # Twilio AP (Tokyo)
+    "54.169.127.128/26",  # Twilio AP (Singapore)
+    "54.252.254.64/26",   # Twilio AP (Sydney)
+]
+
 def generate_inbound_trunk_command(config: InboundTrunkConfig | None = None) -> str:
     """Generate the livekit-cli command to create an inbound SIP trunk.
 
@@ -152,21 +164,70 @@ def generate_dispatch_rule_command(
 
     return cmd
 
-
-def generate_setup_instructions() -> str:
-    """Generate complete setup instructions for Telnyx + LiveKit integration.
-
-    Returns:
-        Formatted instructions string.
-    """
+def generate_twilio_inbound_trunk_command(config: InboundTrunkConfig | None = None) -> str:
+    """Generate the livekit-cli command to create a Twilio inbound SIP trunk."""
     settings = get_settings()
 
+    if config is None:
+        config = InboundTrunkConfig(
+            name="Twilio Inbound",
+            phone_numbers=[settings.twilio_phone_number],
+        )
+
+    numbers_arg = " ".join(f'"{n}"' for n in config.phone_numbers)
+    allowed_ips = ",".join(TWILIO_SIP_IPS)
+
+    cmd = f"""livekit-cli sip inbound create \\
+  --name "{config.name}" \\
+  --numbers {numbers_arg} \\
+  --allowed-addresses "{allowed_ips}" \\
+  --krisp-enabled {str(config.krisp_enabled).lower()}"""
+
+    return cmd
+
+
+def generate_twilio_outbound_trunk_command(config: OutboundTrunkConfig | None = None) -> str:
+    """Generate the livekit-cli command to create a Twilio outbound SIP trunk."""
+    settings = get_settings()
+
+    if config is None:
+        termination_uri = settings.twilio_termination_uri or "<your-trunk>.pstn.twilio.com"
+        config = OutboundTrunkConfig(
+            name="Twilio Outbound",
+            address=termination_uri,
+            username=settings.twilio_account_sid,
+            password=settings.twilio_auth_token.get_secret_value(),
+        )
+
+    cmd = f"""livekit-cli sip outbound create \\
+  --name "{config.name}" \\
+  --address "{config.address}" \\
+  --username "{config.username}" \\
+  --password "{config.password}" """
+
+    return cmd
+
+
+def generate_twilio_setup_instructions() -> str:
+    """Generate complete setup instructions for Twilio Elastic SIP Trunking + LiveKit."""
+    settings = get_settings()
+
+    twilio_dispatch_cmd = generate_dispatch_rule_command(
+        "<TRUNK_ID>",
+        DispatchRuleConfig(
+            name="PROXIMUS Dispatch",
+            room_prefix=settings.room_prefix,
+            agent_name=settings.agent_name,
+            metadata={"source": "twilio", "agent": "proximus"},
+        ),
+    )
+
     instructions = f"""
-# PROXIMUS - Telnyx + LiveKit Setup Instructions
+# PROXIMUS - Twilio Elastic SIP Trunking + LiveKit Setup Instructions
 
 ## Prerequisites
 - LiveKit Cloud account or self-hosted LiveKit with SIP enabled
-- Telnyx account with phone number: {settings.telnyx_phone_number or "<not configured>"}
+- Twilio account with a phone number: {settings.twilio_phone_number or "<not configured>"}
 - livekit-cli installed: `brew install livekit-cli` or `go install github.com/livekit/livekit-cli/cmd/livekit-cli@latest`
 
 ## Step 1: Configure LiveKit CLI
@@ -178,47 +239,143 @@ livekit-cli project add \\
   --api-secret <your-secret>
 ```
 
-## Step 2: Create Inbound SIP Trunk
+## Step 2: Configure Twilio Elastic SIP Trunk (Twilio Console)
 
-This trunk receives calls from Telnyx:
+1. Log in to https://console.twilio.com
+2. Navigate to **Voice → Elastic SIP Trunking → Trunks**
+3. Click **Create new SIP Trunk**
+4. Under **Origination** (inbound), add an Origination URI pointing to your LiveKit SIP URI:
+   - URI: `{settings.livekit_url.replace("wss://", "sip:").replace(":7880", "") or "<your-livekit-sip-uri>"}`
+   - Priority: 10, Weight: 10
+5. Under **Termination** (outbound), note your **Termination SIP URI** — set as `TWILIO_TERMINATION_URI` in `.env`
+6. Under **Phone Numbers**, attach your Twilio number: `{settings.twilio_phone_number or "<your-twilio-number>"}`
+
+## Step 3: Create Inbound SIP Trunk (LiveKit side)
 
 ```bash
-{generate_inbound_trunk_command()}
+{generate_twilio_inbound_trunk_command()}
 ```
 
 **Save the trunk ID from the output!**
 
-## Step 3: Create Dispatch Rule
+## Step 4: Create Dispatch Rule
 
-Replace `<TRUNK_ID>` with the ID from Step 2:
+Replace `<TRUNK_ID>` with the ID from Step 3:
 
 ```bash
-{generate_dispatch_rule_command("<TRUNK_ID>")}
+{twilio_dispatch_cmd}
 ```
 
-## Step 4: Configure Telnyx (in Mission Control Portal)
+## Step 5: Create Outbound SIP Trunk (LiveKit side)
 
-1. Go to Real-Time Communications → Voice → SIP Trunking
-2. Create new FQDN connection:
-   - FQDN: `{settings.telnyx_sip_uri or "<your-livekit-sip-uri>"}`
-   - Port: 5060
-   - Transport: TCP (recommended)
+```bash
+{generate_twilio_outbound_trunk_command()}
+```
 
-3. Configure Authentication:
-   - Method: Credentials
-   - Username: `{settings.telnyx_sip_username or "<your-username>"}`
-   - Password: (your password)
+**Save this trunk ID and set it as `OUTBOUND_TRUNK_ID` in `.env`.**
 
-4. Link your phone number to this SIP connection
-
-## Step 5: Start PROXIMUS Agent
+## Step 6: Start PROXIMUS Agent
 
 ```bash
 python -m proximus agent
 ```
 
-## Step 6: Test
+## Step 7: Test
 
+Call your Twilio number. The call should:
+1. Route through Twilio Elastic SIP Trunking to LiveKit
+2. Create a new room with prefix `{settings.room_prefix}`
+3. Connect to your PROXIMUS agent
+
+## Twilio Credentials Reference
+
+Set these in `.env`:
+SIP_PROVIDER=twilio
+
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+TWILIO_AUTH_TOKEN=your-auth-token
+
+TWILIO_PHONE_NUMBER=+1234567890
+
+TWILIO_TERMINATION_URI=your-trunk.pstn.twilio.com
+"""
+    return instructions
+
+# AFTER:
+def generate_setup_instructions(provider: str | None = None) -> str:
+    """Generate complete setup instructions for the chosen SIP provider + LiveKit.
+
+    Args:
+        provider: "telnyx" or "twilio". Defaults to the value of SIP_PROVIDER in settings.
+
+    Returns:
+        Formatted instructions string.
+    """
+    settings = get_settings()
+    resolved_provider = provider or settings.sip_provider
+
+    if resolved_provider == "twilio":
+        return generate_twilio_setup_instructions()
+
+    instructions = f"""
+# PROXIMUS - Telnyx + LiveKit Setup Instructions
+ 
+## Prerequisites
+- LiveKit Cloud account or self-hosted LiveKit with SIP enabled
+- Telnyx account with phone number: {settings.telnyx_phone_number or "<not configured>"}
+- livekit-cli installed: `brew install livekit-cli` or `go install github.com/livekit/livekit-cli/cmd/livekit-cli@latest`
+ 
+## Step 1: Configure LiveKit CLI
+ 
+```bash
+livekit-cli project add \\
+  --url {settings.livekit_url} \\
+  --api-key {settings.livekit_api_key} \\
+  --api-secret <your-secret>
+```
+ 
+## Step 2: Create Inbound SIP Trunk
+ 
+This trunk receives calls from Telnyx:
+ 
+```bash
+{generate_inbound_trunk_command()}
+```
+ 
+**Save the trunk ID from the output!**
+ 
+## Step 3: Create Dispatch Rule
+ 
+Replace `<TRUNK_ID>` with the ID from Step 2:
+ 
+```bash
+{generate_dispatch_rule_command("<TRUNK_ID>")}
+```
+ 
+## Step 4: Configure Telnyx (in Mission Control Portal)
+ 
+1. Go to Real-Time Communications → Voice → SIP Trunking
+2. Create new FQDN connection:
+   - FQDN: `{settings.telnyx_sip_uri or "<your-livekit-sip-uri>"}`
+   - Port: 5060
+   - Transport: TCP (recommended)
+ 
+3. Configure Authentication:
+   - Method: Credentials
+   - Username: `{settings.telnyx_sip_username or "<your-username>"}`
+   - Password: (your password)
+ 
+4. Link your phone number to this SIP connection
+ 
+## Step 5: Start PROXIMUS Agent
+ 
+```bash
+python -m proximus agent
+```
+ 
+## Step 6: Test
+ 
 Call your Telnyx number. The call should:
 1. Route through Telnyx to LiveKit
 2. Create a new room with prefix `{settings.room_prefix}`
