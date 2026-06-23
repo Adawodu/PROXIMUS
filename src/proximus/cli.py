@@ -11,19 +11,33 @@ from proximus.sip.config import (
     generate_inbound_trunk_command,
     generate_outbound_trunk_command,
     generate_setup_instructions,
+    generate_twilio_inbound_trunk_command,
+    generate_twilio_outbound_trunk_command,
 )
+
+
+def _resolve_provider(args: argparse.Namespace) -> str:
+    """Return the SIP provider from --provider flag or settings."""
+    if getattr(args, "provider", None):
+        return args.provider
+    return get_settings().sip_provider
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
     """Print complete setup instructions."""
-    print(generate_setup_instructions())
+    print(generate_setup_instructions(provider=_resolve_provider(args)))
     return 0
 
 
 def cmd_trunk_inbound(args: argparse.Namespace) -> int:
     """Generate the inbound trunk creation command."""
-    print("# Create inbound SIP trunk for Telnyx")
-    print(generate_inbound_trunk_command())
+    provider = _resolve_provider(args)
+    if provider == "twilio":
+        print("# Create inbound SIP trunk for Twilio Elastic SIP Trunking")
+        print(generate_twilio_inbound_trunk_command())
+    else:
+        print("# Create inbound SIP trunk for Telnyx")
+        print(generate_inbound_trunk_command())
     print()
     print("# After running, save the trunk ID for the dispatch rule")
     return 0
@@ -31,8 +45,13 @@ def cmd_trunk_inbound(args: argparse.Namespace) -> int:
 
 def cmd_trunk_outbound(args: argparse.Namespace) -> int:
     """Generate the outbound trunk creation command."""
-    print("# Create outbound SIP trunk for Telnyx (for making calls)")
-    print(generate_outbound_trunk_command())
+    provider = _resolve_provider(args)
+    if provider == "twilio":
+        print("# Create outbound SIP trunk for Twilio Elastic SIP Trunking")
+        print(generate_twilio_outbound_trunk_command())
+    else:
+        print("# Create outbound SIP trunk for Telnyx (for making calls)")
+        print(generate_outbound_trunk_command())
     return 0
 
 
@@ -62,6 +81,8 @@ def cmd_config(args: argparse.Namespace) -> int:
         f"  API Secret: {'*' * 8 if settings.livekit_api_secret.get_secret_value() else '(not set)'}"
     )
     print()
+    print(f"SIP Provider: {settings.sip_provider}")
+    print()
     print("Telnyx:")
     print(f"  API Key: {'*' * 8 if settings.telnyx_api_key.get_secret_value() else '(not set)'}")
     print(f"  SIP URI: {settings.telnyx_sip_uri or '(not set)'}")
@@ -70,6 +91,15 @@ def cmd_config(args: argparse.Namespace) -> int:
         f"  SIP Password: {'*' * 8 if settings.telnyx_sip_password.get_secret_value() else '(not set)'}"
     )
     print(f"  Phone Number: {settings.telnyx_phone_number or '(not set)'}")
+    print()
+    print("Twilio:")
+    print(f"  Account SID: {settings.twilio_account_sid or '(not set)'}")
+    print(
+        f"  Auth Token: {'*' * 8 if settings.twilio_auth_token.get_secret_value() else '(not set)'}"
+    )
+    print(f"  Phone Number: {settings.twilio_phone_number or '(not set)'}")
+    print(f"  SIP Domain: {settings.twilio_sip_domain or '(not set)'}")
+    print(f"  Termination URI: {settings.twilio_termination_uri or '(not set)'}")
     print()
     print("Agent:")
     print(f"  Name: {settings.agent_name}")
@@ -95,25 +125,36 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 def run_cli() -> int:
     """Run the SIP CLI with subcommands."""
+    # AFTER:
     parser = argparse.ArgumentParser(
-        prog="proximus sip", description="PROXIMUS SIP/Telnyx configuration commands"
+        prog="proximus sip",
+        description="PROXIMUS SIP configuration commands (Telnyx or Twilio)",
     )
     subparsers = parser.add_subparsers(dest="subcommand", help="Available commands")
 
+    _provider_kwargs = dict(
+        choices=["telnyx", "twilio"],
+        default=None,
+        help="SIP provider to use (overrides SIP_PROVIDER env var)",
+    )
+
     # setup
     setup_parser = subparsers.add_parser("setup", help="Print complete setup instructions")
+    setup_parser.add_argument("--provider", **_provider_kwargs)
     setup_parser.set_defaults(func=cmd_setup)
 
     # trunk-inbound
     inbound_parser = subparsers.add_parser(
         "trunk-inbound", help="Generate inbound trunk CLI command"
     )
+    inbound_parser.add_argument("--provider", **_provider_kwargs)
     inbound_parser.set_defaults(func=cmd_trunk_inbound)
 
     # trunk-outbound
     outbound_parser = subparsers.add_parser(
         "trunk-outbound", help="Generate outbound trunk CLI command"
     )
+    outbound_parser.add_argument("--provider", **_provider_kwargs)
     outbound_parser.set_defaults(func=cmd_trunk_outbound)
 
     # dispatch-rule
