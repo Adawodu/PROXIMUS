@@ -49,14 +49,15 @@ TELNYX_SIP_IPS = [
 # Twilio Elastic SIP Trunking IP ranges (signaling)
 # See: https://www.twilio.com/docs/sip-trunking/ip-addresses
 TWILIO_SIP_IPS = [
-    "54.172.60.0/23",     # Twilio US East
-    "54.244.51.0/24",     # Twilio US West
+    "54.172.60.0/23",  # Twilio US East
+    "54.244.51.0/24",  # Twilio US West
     "54.171.127.192/26",  # Twilio EU (Ireland)
     "35.156.191.128/25",  # Twilio EU (Frankfurt)
-    "54.65.63.192/26",    # Twilio AP (Tokyo)
+    "54.65.63.192/26",  # Twilio AP (Tokyo)
     "54.169.127.128/26",  # Twilio AP (Singapore)
-    "54.252.254.64/26",   # Twilio AP (Sydney)
+    "54.252.254.64/26",  # Twilio AP (Sydney)
 ]
+
 
 def generate_inbound_trunk_command(config: InboundTrunkConfig | None = None) -> str:
     """Generate the livekit-cli command to create an inbound SIP trunk.
@@ -163,6 +164,7 @@ def generate_dispatch_rule_command(
     cmd = f"""livekit-cli sip dispatch create --request '{rule_json}'"""
 
     return cmd
+
 
 def generate_twilio_inbound_trunk_command(config: InboundTrunkConfig | None = None) -> str:
     """Generate the livekit-cli command to create a Twilio inbound SIP trunk."""
@@ -301,6 +303,7 @@ TWILIO_PHONE_NUMBER=+1234567890
 TWILIO_TERMINATION_URI=your-trunk.pstn.twilio.com
 """
     return instructions
+
 
 # AFTER:
 def generate_setup_instructions(provider: str | None = None) -> str:

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from proximus.config import Settings
+from proximus.config import Settings, get_settings
 from proximus.sip.config import (
     TWILIO_SIP_IPS,
+    generate_setup_instructions,
     generate_twilio_inbound_trunk_command,
     generate_twilio_outbound_trunk_command,
     generate_twilio_setup_instructions,
-    generate_setup_instructions,
 )
-from proximus.config import get_settings
+
 
 def _settings(**kwargs) -> Settings:
     return Settings(_env_file=None, **kwargs)
@@ -17,6 +17,7 @@ def _settings(**kwargs) -> Settings:
 # ---------------------------------------------------------------------------
 # Config / Settings
 # ---------------------------------------------------------------------------
+
 
 def test_sip_provider_default_is_telnyx():
     s = _settings()
@@ -52,6 +53,7 @@ def test_twilio_fields_loaded_from_env():
 # SIP IP list
 # ---------------------------------------------------------------------------
 
+
 def test_twilio_sip_ips_is_non_empty():
     assert len(TWILIO_SIP_IPS) > 0
 
@@ -64,6 +66,7 @@ def test_twilio_sip_ips_are_cidr_strings():
 # ---------------------------------------------------------------------------
 # Inbound trunk command
 # ---------------------------------------------------------------------------
+
 
 def test_twilio_inbound_trunk_command_contains_twilio_ips(monkeypatch):
     monkeypatch.setenv("TWILIO_PHONE_NUMBER", "+15559876543")
@@ -87,6 +90,7 @@ def test_twilio_inbound_trunk_command_has_livekit_cli_prefix():
 # Outbound trunk command
 # ---------------------------------------------------------------------------
 
+
 def test_twilio_outbound_trunk_command_uses_termination_uri(monkeypatch):
     get_settings.cache_clear()
     monkeypatch.setenv("TWILIO_TERMINATION_URI", "mytesttrunk.pstn.twilio.com")
@@ -104,6 +108,7 @@ def test_twilio_outbound_trunk_command_has_livekit_cli_prefix():
 # ---------------------------------------------------------------------------
 # Setup instructions
 # ---------------------------------------------------------------------------
+
 
 def test_twilio_setup_instructions_mentions_twilio():
     instructions = generate_twilio_setup_instructions()

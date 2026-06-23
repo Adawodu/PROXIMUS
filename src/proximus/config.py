@@ -23,9 +23,8 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""
     livekit_api_secret: SecretStr = SecretStr("")
 
-
     sip_provider: Literal["telnyx", "twilio"] = "telnyx"
-    
+
     # Telnyx
     telnyx_api_key: SecretStr = SecretStr("")
     telnyx_sip_uri: str = ""
@@ -35,13 +34,12 @@ class Settings(BaseSettings):
     telnyx_credential_connection_id: str = (
         ""  # Telnyx credential connection ID (for caller ID / ANI override)
     )
-        # Twilio
+    # Twilio
     twilio_account_sid: str = ""
     twilio_auth_token: SecretStr = SecretStr("")
-    twilio_phone_number: str = ""   # E.164 format
-    twilio_sip_domain: str = ""     # e.g. proximus.pstn.twilio.com
+    twilio_phone_number: str = ""  # E.164 format
+    twilio_sip_domain: str = ""  # e.g. proximus.pstn.twilio.com
     twilio_termination_uri: str = ""  # SIP termination URI for outbound trunk
-
 
     # SIP/Agent Configuration
     agent_name: str = "proximus-agent"

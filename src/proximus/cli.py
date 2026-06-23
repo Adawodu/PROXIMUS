@@ -125,7 +125,7 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 def run_cli() -> int:
     """Run the SIP CLI with subcommands."""
-# AFTER:
+    # AFTER:
     parser = argparse.ArgumentParser(
         prog="proximus sip",
         description="PROXIMUS SIP configuration commands (Telnyx or Twilio)",
