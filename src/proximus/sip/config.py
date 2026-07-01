@@ -193,17 +193,17 @@ def generate_twilio_outbound_trunk_command(config: OutboundTrunkConfig | None = 
     settings = get_settings()
 
     if config is None:
-            # Twilio Elastic SIP Trunking uses a Credential List for SIP digest auth,
-            # NOT the Account SID / Auth Token (those are REST API credentials only).
-            # Create a Credential List in Twilio Console:
-            # Elastic SIP Trunking -> your trunk -> Authentication -> Credential Lists
-            termination_uri = settings.twilio_termination_uri or "<your-trunk>.pstn.twilio.com"
-            config = OutboundTrunkConfig(
-                name="Twilio Outbound",
-                address=termination_uri,
-                username=settings.twilio_sip_username,
-                password=settings.twilio_sip_password.get_secret_value(),
-            )
+        # Twilio Elastic SIP Trunking uses a Credential List for SIP digest auth,
+        # NOT the Account SID / Auth Token (those are REST API credentials only).
+        # Create a Credential List in Twilio Console:
+        # Elastic SIP Trunking -> your trunk -> Authentication -> Credential Lists
+        termination_uri = settings.twilio_termination_uri or "<your-trunk>.pstn.twilio.com"
+        config = OutboundTrunkConfig(
+            name="Twilio Outbound",
+            address=termination_uri,
+            username=settings.twilio_sip_username,
+            password=settings.twilio_sip_password.get_secret_value(),
+        )
     cmd = f"""livekit-cli sip outbound create \\
   --name "{config.name}" \\
   --address "{config.address}" \\
