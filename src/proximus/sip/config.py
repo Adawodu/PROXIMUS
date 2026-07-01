@@ -308,7 +308,6 @@ TWILIO_SIP_PASSWORD=your-credential-list-password
     return instructions
 
 
-# AFTER:
 def generate_setup_instructions(provider: str | None = None) -> str:
     """Generate complete setup instructions for the chosen SIP provider + LiveKit.
 
