@@ -304,7 +304,7 @@ TWILIO_PHONE_NUMBER=+1234567890
 TWILIO_TERMINATION_URI=your-trunk.pstn.twilio.com
 TWILIO_SIP_USERNAME=your-credential-list-username
 TWILIO_SIP_PASSWORD=your-credential-list-password
-"""
+
     return instructions
 
 
