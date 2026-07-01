@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     livekit_url: str = "wss://localhost:7880"
     livekit_api_key: str = ""
     livekit_api_secret: SecretStr = SecretStr("")
+    livekit_sip_uri: str = ""  # e.g. your-project.sip.livekit.cloud (for setup instructions)
+
+    # SIP Provider: "telnyx" or "twilio"
+    sip_provider: Literal["telnyx", "twilio"] = "telnyx"
 
     # Telnyx
     telnyx_api_key: SecretStr = SecretStr("")
@@ -32,6 +36,17 @@ class Settings(BaseSettings):
     telnyx_credential_connection_id: str = (
         ""  # Telnyx credential connection ID (for caller ID / ANI override)
     )
+
+    # Twilio
+    twilio_account_sid: str = ""
+    twilio_auth_token: SecretStr = SecretStr("")
+    twilio_phone_number: str = ""  # Your Twilio phone number (E.164 format)
+    twilio_termination_uri: str = ""  # SIP termination URI e.g. your-trunk.pstn.twilio.com
+    # Twilio Credential List credentials for SIP trunk digest authentication.
+    # Create in Twilio Console: Elastic SIP Trunking -> your trunk -> Authentication
+    # -> Credential Lists. These are NOT the Account SID / Auth Token.
+    twilio_sip_username: str = ""
+    twilio_sip_password: SecretStr = SecretStr("")
 
     # SIP/Agent Configuration
     agent_name: str = "proximus-agent"
