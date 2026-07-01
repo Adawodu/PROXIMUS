@@ -98,8 +98,11 @@ def cmd_config(args: argparse.Namespace) -> int:
         f"  Auth Token: {'*' * 8 if settings.twilio_auth_token.get_secret_value() else '(not set)'}"
     )
     print(f"  Phone Number: {settings.twilio_phone_number or '(not set)'}")
-    print(f"  SIP Domain: {settings.twilio_sip_domain or '(not set)'}")
     print(f"  Termination URI: {settings.twilio_termination_uri or '(not set)'}")
+    print(f"  SIP Username (Credential List): {settings.twilio_sip_username or '(not set)'}")
+    print(
+        f"  SIP Password (Credential List): {'*' * 8 if settings.twilio_sip_password.get_secret_value() else '(not set)'}"
+    )
     print()
     print("Agent:")
     print(f"  Name: {settings.agent_name}")
@@ -125,7 +128,6 @@ def cmd_config(args: argparse.Namespace) -> int:
 
 def run_cli() -> int:
     """Run the SIP CLI with subcommands."""
-    # AFTER:
     parser = argparse.ArgumentParser(
         prog="proximus sip",
         description="PROXIMUS SIP configuration commands (Telnyx or Twilio)",
@@ -172,7 +174,6 @@ def run_cli() -> int:
     config_parser = subparsers.add_parser("config", help="Show current configuration")
     config_parser.set_defaults(func=cmd_config)
 
-    # Parse args
     args = parser.parse_args()
 
     if not args.subcommand:

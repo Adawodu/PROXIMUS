@@ -193,14 +193,17 @@ def generate_twilio_outbound_trunk_command(config: OutboundTrunkConfig | None = 
     settings = get_settings()
 
     if config is None:
-        termination_uri = settings.twilio_termination_uri or "<your-trunk>.pstn.twilio.com"
-        config = OutboundTrunkConfig(
-            name="Twilio Outbound",
-            address=termination_uri,
-            username=settings.twilio_account_sid,
-            password=settings.twilio_auth_token.get_secret_value(),
-        )
-
+            # Twilio Elastic SIP Trunking uses a Credential List for SIP digest auth,
+            # NOT the Account SID / Auth Token (those are REST API credentials only).
+            # Create a Credential List in Twilio Console:
+            # Elastic SIP Trunking -> your trunk -> Authentication -> Credential Lists
+            termination_uri = settings.twilio_termination_uri or "<your-trunk>.pstn.twilio.com"
+            config = OutboundTrunkConfig(
+                name="Twilio Outbound",
+                address=termination_uri,
+                username=settings.twilio_sip_username,
+                password=settings.twilio_sip_password.get_secret_value(),
+            )
     cmd = f"""livekit-cli sip outbound create \\
   --name "{config.name}" \\
   --address "{config.address}" \\
@@ -268,7 +271,18 @@ Replace `<TRUNK_ID>` with the ID from Step 3:
 {twilio_dispatch_cmd}
 ```
 
-## Step 5: Create Outbound SIP Trunk (LiveKit side)
+## Step 5: Create a Twilio Credential List for outbound auth
+
+Twilio Elastic SIP Trunking uses **digest authentication via a Credential List** for
+outbound calls — your Account SID and Auth Token are REST API credentials only and
+will not work for SIP digest auth.
+
+1. In the Twilio Console go to **Elastic SIP Trunking → your trunk → Authentication**
+2. Under **Credential Lists**, click **Create new Credential List**
+3. Add a username and password, then link the list to your trunk
+4. Set `TWILIO_SIP_USERNAME` and `TWILIO_SIP_PASSWORD` in `.env` to those values
+
+## Step 6: Create Outbound SIP Trunk (LiveKit side)
 
 ```bash
 {generate_twilio_outbound_trunk_command()}
@@ -276,20 +290,7 @@ Replace `<TRUNK_ID>` with the ID from Step 3:
 
 **Save this trunk ID and set it as `OUTBOUND_TRUNK_ID` in `.env`.**
 
-## Step 6: Start PROXIMUS Agent
-
-```bash
-python -m proximus agent
-```
-
-## Step 7: Test
-
-Call your Twilio number. The call should:
-1. Route through Twilio Elastic SIP Trunking to LiveKit
-2. Create a new room with prefix `{settings.room_prefix}`
-3. Connect to your PROXIMUS agent
-
-## Twilio Credentials Reference
+## Step 7: Start PROXIMUS Agent
 
 Set these in `.env`:
 SIP_PROVIDER=twilio
@@ -301,6 +302,8 @@ TWILIO_AUTH_TOKEN=your-auth-token
 TWILIO_PHONE_NUMBER=+1234567890
 
 TWILIO_TERMINATION_URI=your-trunk.pstn.twilio.com
+TWILIO_SIP_USERNAME=your-credential-list-username
+TWILIO_SIP_PASSWORD=your-credential-list-password
 """
     return instructions
 
