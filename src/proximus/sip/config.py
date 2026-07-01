@@ -250,7 +250,7 @@ livekit-cli project add \\
 2. Navigate to **Voice → Elastic SIP Trunking → Trunks**
 3. Click **Create new SIP Trunk**
 4. Under **Origination** (inbound), add an Origination URI pointing to your LiveKit SIP URI:
-   - URI: `{settings.livekit_url.replace("wss://", "sip:").replace(":7880", "") or "<your-livekit-sip-uri>"}`
+   - URI: `sip:{settings.livekit_sip_uri or "<your-livekit-sip-uri>"}`
    - Priority: 10, Weight: 10
 5. Under **Termination** (outbound), note your **Termination SIP URI** — set as `TWILIO_TERMINATION_URI` in `.env`
 6. Under **Phone Numbers**, attach your Twilio number: `{settings.twilio_phone_number or "<your-twilio-number>"}`
