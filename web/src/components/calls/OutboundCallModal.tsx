@@ -22,7 +22,7 @@ export function OutboundCallModal({ open, onClose }: Props) {
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [phone, setPhone] = useState('');
-  const [callerId, setCallerId] = useState('+12403513678');
+  const [callerId, setCallerId] = useState('');
   const [jobDetail, setJobDetail] = useState('');
   const [phase, setPhase] = useState<CallPhase>('setup');
   const [errorMsg, setErrorMsg] = useState('');
@@ -46,7 +46,7 @@ export function OutboundCallModal({ open, onClose }: Props) {
       setPhase('setup');
       setErrorMsg('');
       setPhone('');
-      setCallerId('+12403513678');
+      setCallerId('');
       setJobDetail('');
       setRoomName('');
       setParticipants([]);
@@ -130,8 +130,12 @@ export function OutboundCallModal({ open, onClose }: Props) {
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
-        setParticipants((prev) => [...prev, participant.identity]);
-        if (phase !== 'connected') setPhase('connected');
+        setParticipants((prev) =>
+          prev.includes(participant.identity) ? prev : [...prev, participant.identity]
+        );
+        // setPhase is idempotent; call it directly instead of guarding on the
+        // stale `phase` captured by this closure at dial time.
+        setPhase('connected');
       });
 
       room.on(RoomEvent.ParticipantDisconnected, (participant) => {
@@ -257,7 +261,7 @@ export function OutboundCallModal({ open, onClose }: Props) {
                   type="tel"
                   value={callerId}
                   onChange={(e) => setCallerId(e.target.value)}
-                  placeholder="+12403513678"
+                  placeholder="+12125550123"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-gray-400 mt-1">

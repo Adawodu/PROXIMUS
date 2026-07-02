@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
     ai_provider: Literal["anthropic", "openai"] = "anthropic"
+    # LLM model per provider. Default to a low-latency model — voice turns are short
+    # (2-3 sentences) and every 100ms is audible on a live call.
+    anthropic_model: str = "claude-haiku-4-5"
+    openai_model: str = "gpt-4o"
 
     # Speech Services
     deepgram_api_key: SecretStr = SecretStr("")
@@ -65,6 +69,10 @@ class Settings(BaseSettings):
     # API Server
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    # API authentication. When set, every non-public route requires a matching
+    # X-API-Key header. Left empty the API is unauthenticated — fine for local dev,
+    # but set this before exposing the server (outbound calls cost real money).
+    api_key: SecretStr = SecretStr("")
 
     # Logging
     log_level: str = "INFO"

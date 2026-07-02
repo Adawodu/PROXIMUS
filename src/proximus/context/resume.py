@@ -152,7 +152,7 @@ class ResumeManager:
         suffix = path.suffix.lower()
         if suffix == ".pdf":
             content = self._extract_text_from_pdf(path)
-        elif suffix in (".docx", ".doc"):
+        elif suffix == ".docx":
             content = self._extract_text_from_docx(path)
         elif suffix == ".txt":
             content = path.read_text(encoding="utf-8")

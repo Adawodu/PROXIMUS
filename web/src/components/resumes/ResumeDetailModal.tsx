@@ -12,10 +12,19 @@ export function ResumeDetailModal({ resume, onClose }: Props) {
   const [tab, setTab] = useState<'preview' | 'prompt'>('preview');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [phones, setPhones] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getResumeContext(resume.id).then((d) => setSystemPrompt(d.system_prompt));
-    getResumePhones(resume.id).then((d) => setPhones(d.phones));
+    setError(null);
+    getResumeContext(resume.id)
+      .then((d) => setSystemPrompt(d.system_prompt))
+      .catch((e) =>
+        setError(e instanceof Error ? e.message : 'Failed to load system prompt')
+      );
+    // Linked phones are supplementary — a failure here shouldn't block the modal.
+    getResumePhones(resume.id)
+      .then((d) => setPhones(d.phones))
+      .catch(() => setPhones([]));
   }, [resume.id]);
 
   return (
@@ -50,6 +59,8 @@ export function ResumeDetailModal({ resume, onClose }: Props) {
         <div className="max-h-96 overflow-y-auto p-6">
           {tab === 'preview' ? (
             <pre className="whitespace-pre-wrap text-sm text-gray-700">{resume.content_preview}</pre>
+          ) : error ? (
+            <p role="alert" className="text-sm text-red-600">{error}</p>
           ) : (
             <pre className="whitespace-pre-wrap text-sm text-gray-700">{systemPrompt || 'Loading...'}</pre>
           )}
