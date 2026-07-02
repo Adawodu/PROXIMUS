@@ -35,7 +35,6 @@ async def initiate_outbound_call(
     settings = get_settings()
 
     if not settings.outbound_trunk_id:
-    if not settings.outbound_trunk_id:
         provider = settings.sip_provider
         if provider == "twilio":
             hint = "proximus sip trunk-outbound --provider twilio"

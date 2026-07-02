@@ -31,6 +31,7 @@ def _clear_settings_cache():
 # Config / Settings
 # ---------------------------------------------------------------------------
 
+
 def test_sip_provider_default_is_telnyx():
     s = _settings()
     assert s.sip_provider == "telnyx"
@@ -68,6 +69,7 @@ def test_twilio_fields_loaded_from_env():
 # SIP IP list
 # ---------------------------------------------------------------------------
 
+
 def test_twilio_sip_ips_is_non_empty():
     assert len(TWILIO_SIP_IPS) > 0
 
@@ -80,6 +82,7 @@ def test_twilio_sip_ips_are_cidr_strings():
 # ---------------------------------------------------------------------------
 # Inbound trunk command
 # ---------------------------------------------------------------------------
+
 
 def test_twilio_inbound_trunk_command_contains_twilio_ips(monkeypatch):
     monkeypatch.setenv("TWILIO_PHONE_NUMBER", "+15559876543")
@@ -102,6 +105,7 @@ def test_twilio_inbound_trunk_command_has_livekit_cli_prefix():
 # ---------------------------------------------------------------------------
 # Outbound trunk command — uses Credential List creds, NOT Account SID/Auth Token
 # ---------------------------------------------------------------------------
+
 
 def test_twilio_outbound_trunk_uses_credential_list_not_account_sid(monkeypatch):
     """Twilio SIP digest auth requires a Credential List, not Account SID/Auth Token."""
@@ -136,6 +140,7 @@ def test_twilio_outbound_trunk_command_has_livekit_cli_prefix():
 # ---------------------------------------------------------------------------
 # Setup instructions
 # ---------------------------------------------------------------------------
+
 
 def test_twilio_setup_instructions_mentions_twilio():
     instructions = generate_twilio_setup_instructions()
