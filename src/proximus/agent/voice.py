@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 import time
 
 from dotenv import load_dotenv
@@ -15,11 +16,25 @@ from livekit import agents, rtc
 from livekit.agents import Agent, AgentServer, AgentSession, room_io
 from livekit.plugins import anthropic, cartesia, deepgram, openai, silero
 
+from proximus.agent.summarize import generate_call_summary
 from proximus.config import get_settings
 from proximus.context import Resume, ResumeManager
 from proximus.context.calls import CallManager, CallRecord, CallTranscriptEntry
 
 logger = logging.getLogger(__name__)
+
+# Default Cartesia TTS voice, used when a resume doesn't specify its own.
+DEFAULT_TTS_VOICE = "5ee9feff-1265-424a-9d7f-8e4d431a12c7"
+
+
+def _add_call_summary(record: CallRecord) -> None:
+    """Generate and persist a post-call summary (best-effort, off the event loop)."""
+    summary = generate_call_summary(record.transcript, record.candidate_name)
+    if summary:
+        record.summary = summary
+        get_call_manager().save_call(record)
+        logger.info(f"Added summary to call {record.id}")
+
 
 # Global managers - shared across calls
 _resume_manager: ResumeManager | None = None
@@ -199,7 +214,7 @@ async def handle_call(ctx: agents.JobContext):
     session = AgentSession(
         stt=deepgram.STT(model="nova-3"),
         llm=get_llm(),
-        tts=cartesia.TTS(voice="5ee9feff-1265-424a-9d7f-8e4d431a12c7"),
+        tts=cartesia.TTS(voice=resume.voice or DEFAULT_TTS_VOICE),
         vad=silero.VAD.load(
             min_silence_duration=0.5,
         ),
@@ -230,8 +245,11 @@ async def handle_call(ctx: agents.JobContext):
     def _on_close(*args):
         call_record.ended_at = datetime.now()
         call_record.transcript = transcript
+        # Persist the transcript immediately so it's never lost, then add an AI
+        # summary in the background (best-effort, off the event loop).
         get_call_manager().save_call(call_record)
         logger.info(f"Call ended, saved transcript with {len(transcript)} turns: {call_record.id}")
+        threading.Thread(target=_add_call_summary, args=(call_record,), daemon=True).start()
 
     # Start the session — for outbound, only link to SIP participants (not browser listeners)
     input_opts = (

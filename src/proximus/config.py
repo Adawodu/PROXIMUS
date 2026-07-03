@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     # X-API-Key header. Left empty the API is unauthenticated — fine for local dev,
     # but set this before exposing the server (outbound calls cost real money).
     api_key: SecretStr = SecretStr("")
+    # Comma-separated list of allowed CORS origins for the web dashboard.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Max outbound calls allowed per rolling minute (0 disables the limit).
+    outbound_rate_limit_per_min: int = 10
 
     # Logging
     log_level: str = "INFO"
