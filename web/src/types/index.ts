@@ -4,6 +4,7 @@ export interface Resume {
   file_path: string;
   created_at: string;
   content_preview: string;
+  voice?: string;
 }
 
 export interface ResumeListResponse {
@@ -55,6 +56,7 @@ export interface CallSummary {
   started_at: string;
   ended_at: string | null;
   turn_count: number;
+  summary?: string | null;
 }
 
 export interface CallDetail extends CallSummary {

@@ -189,11 +189,27 @@ export function OutboundCallModal({ open, onClose }: Props) {
     onClose();
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // handleClose is stable enough for this listener; re-subscribing per render is fine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Call recruiter"
+        className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
+      >
         {/* Header */}
         <div
           className={`px-6 py-4 ${
