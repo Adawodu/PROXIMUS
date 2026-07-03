@@ -78,50 +78,60 @@ export function CallHistory() {
 
       {calls.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidate</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Direction</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Turns</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {calls.map((call) => (
-                <tr key={call.id} className="group">
-                  <td colSpan={6} className="p-0">
-                    <button
-                      onClick={() => setExpandedId(expandedId === call.id ? null : call.id)}
-                      className="w-full text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex">
-                        <div className="px-4 py-3 text-sm text-gray-700 w-[20%]">{formatTime(call.started_at)}</div>
-                        <div className="px-4 py-3 text-sm font-medium text-gray-900 w-[20%]">{call.candidate_name}</div>
-                        <div className="px-4 py-3 w-[12%]">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                              call.direction === 'inbound'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-blue-100 text-blue-700'
-                            }`}
-                          >
-                            {call.direction}
-                          </span>
+          {/* Column labels (visual only; each row below is an accessible disclosure button). */}
+          <div
+            aria-hidden="true"
+            className="hidden sm:flex bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500 uppercase"
+          >
+            <div className="px-4 py-3 w-[20%]">Date</div>
+            <div className="px-4 py-3 w-[20%]">Candidate</div>
+            <div className="px-4 py-3 w-[12%]">Direction</div>
+            <div className="px-4 py-3 w-[18%]">Phone</div>
+            <div className="px-4 py-3 w-[15%]">Duration</div>
+            <div className="px-4 py-3 w-[15%]">Turns</div>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {calls.map((call) => {
+              const expanded = expandedId === call.id;
+              return (
+                <li key={call.id}>
+                  <button
+                    onClick={() => setExpandedId(expanded ? null : call.id)}
+                    aria-expanded={expanded}
+                    className="w-full text-left hover:bg-gray-50 transition-colors sm:flex"
+                  >
+                    <div className="px-4 py-3 text-sm text-gray-700 sm:w-[20%]">{formatTime(call.started_at)}</div>
+                    <div className="px-4 py-3 text-sm font-medium text-gray-900 sm:w-[20%]">{call.candidate_name}</div>
+                    <div className="px-4 py-3 sm:w-[12%]">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          call.direction === 'inbound'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {call.direction}
+                      </span>
+                    </div>
+                    <div className="px-4 py-3 text-sm text-gray-600 sm:w-[18%]">{call.caller_phone || '—'}</div>
+                    <div className="px-4 py-3 text-sm text-gray-600 sm:w-[15%]">{formatDuration(call.started_at, call.ended_at)}</div>
+                    <div className="px-4 py-3 text-sm text-gray-600 sm:w-[15%]">{call.turn_count} turns</div>
+                  </button>
+                  {expanded && (
+                    <>
+                      {call.summary && (
+                        <div className="px-4 py-3 bg-indigo-50 border-t border-indigo-100">
+                          <p className="text-xs font-medium text-indigo-500 uppercase mb-1">Summary</p>
+                          <p className="text-sm text-indigo-900">{call.summary}</p>
                         </div>
-                        <div className="px-4 py-3 text-sm text-gray-600 w-[18%]">{call.caller_phone || '—'}</div>
-                        <div className="px-4 py-3 text-sm text-gray-600 w-[15%]">{formatDuration(call.started_at, call.ended_at)}</div>
-                        <div className="px-4 py-3 text-sm text-gray-600 w-[15%]">{call.turn_count} turns</div>
-                      </div>
-                    </button>
-                    {expandedId === call.id && <TranscriptView callId={call.id} />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      )}
+                      <TranscriptView callId={call.id} />
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>
