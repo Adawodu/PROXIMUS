@@ -5,10 +5,13 @@ from __future__ import annotations
 import secrets
 import shutil
 import tempfile
+import time
+from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +27,27 @@ PUBLIC_PATHS = {"/health", "/docs", "/redoc", "/openapi.json"}
 # Maximum accepted resume upload size (bytes). Guards against memory-exhaustion
 # / DoS via oversized uploads.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+# In-memory sliding-window rate limiter for outbound calls (per process).
+_outbound_call_times: deque[float] = deque()
+_outbound_lock = Lock()
+
+
+def _check_outbound_rate_limit() -> None:
+    """Raise 429 if the outbound-call rate limit for this minute is exceeded."""
+    limit = get_settings().outbound_rate_limit_per_min
+    if limit <= 0:
+        return
+    now = time.monotonic()
+    with _outbound_lock:
+        while _outbound_call_times and now - _outbound_call_times[0] > 60:
+            _outbound_call_times.popleft()
+        if len(_outbound_call_times) >= limit:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Outbound call rate limit reached ({limit}/min). Try again shortly.",
+            )
+        _outbound_call_times.append(now)
 
 
 async def verify_api_key(
@@ -93,7 +117,7 @@ app = create_app()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[o.strip() for o in get_settings().cors_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -113,6 +137,13 @@ class ResumeResponse(BaseModel):
     file_path: str
     created_at: datetime
     content_preview: str  # First 500 chars
+    voice: str = ""  # per-resume TTS voice id ("" = provider default)
+
+
+class ResumeVoiceUpdate(BaseModel):
+    """Request model for updating a resume's TTS voice."""
+
+    voice: str
 
 
 class ResumeListResponse(BaseModel):
@@ -179,6 +210,7 @@ class CallSummaryResponse(BaseModel):
     started_at: datetime
     ended_at: datetime | None
     turn_count: int
+    summary: str | None = None
 
 
 class CallDetailResponse(CallSummaryResponse):
@@ -227,6 +259,7 @@ def resume_to_response(resume: Resume) -> ResumeResponse:
         content_preview=resume.content[:500] + "..."
         if len(resume.content) > 500
         else resume.content,
+        voice=resume.voice,
     )
 
 
@@ -242,13 +275,13 @@ async def health_check() -> HealthResponse:
 
 
 @app.get("/resumes", response_model=ResumeListResponse)
-async def list_resumes() -> ResumeListResponse:
-    """List all uploaded resumes."""
+async def list_resumes(limit: int | None = None, offset: int = 0) -> ResumeListResponse:
+    """List uploaded resumes (most recent first). Pass limit/offset to paginate."""
     manager = get_resume_manager()
-    resumes = manager.list_resumes()
+    resumes = manager.list_resumes(limit=limit, offset=offset)
     return ResumeListResponse(
         resumes=[resume_to_response(r) for r in resumes],
-        total=len(resumes),
+        total=manager.count_resumes(),
     )
 
 
@@ -257,6 +290,16 @@ async def get_resume(resume_id: str) -> ResumeResponse:
     """Get a specific resume by ID."""
     manager = get_resume_manager()
     resume = manager.get_resume(resume_id)
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    return resume_to_response(resume)
+
+
+@app.patch("/resumes/{resume_id}", response_model=ResumeResponse)
+async def update_resume(resume_id: str, update: ResumeVoiceUpdate) -> ResumeResponse:
+    """Update a resume's TTS voice."""
+    manager = get_resume_manager()
+    resume = manager.set_voice(resume_id, update.voice)
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
     return resume_to_response(resume)
@@ -462,17 +505,18 @@ def _call_to_summary(record: CallRecord) -> CallSummaryResponse:
         started_at=record.started_at,
         ended_at=record.ended_at,
         turn_count=len(record.transcript),
+        summary=record.summary,
     )
 
 
 @app.get("/calls", response_model=CallListResponse)
-async def list_calls() -> CallListResponse:
-    """List all call records."""
+async def list_calls(limit: int | None = None, offset: int = 0) -> CallListResponse:
+    """List call records (most recent first). Pass limit/offset to paginate."""
     manager = get_call_manager()
-    records = manager.list_calls()
+    records = manager.list_calls(limit=limit, offset=offset)
     return CallListResponse(
         calls=[_call_to_summary(r) for r in records],
-        total=len(records),
+        total=manager.count_calls(),
     )
 
 
@@ -494,6 +538,7 @@ async def get_call(call_id: str) -> CallDetailResponse:
         started_at=record.started_at,
         ended_at=record.ended_at,
         turn_count=len(record.transcript),
+        summary=record.summary,
         transcript=[
             CallTranscriptEntryResponse(role=e.role, text=e.text, timestamp=e.timestamp)
             for e in record.transcript
@@ -510,6 +555,9 @@ async def get_call(call_id: str) -> CallDetailResponse:
 async def make_outbound_call(request: OutboundCallRequest) -> OutboundCallResponse:
     """Initiate an outbound call to a recruiter."""
     from proximus.agent.outbound import initiate_outbound_call
+
+    # Bound how many calls can be placed per minute (each call costs money).
+    _check_outbound_rate_limit()
 
     # Verify resume exists
     resume_manager = get_resume_manager()
