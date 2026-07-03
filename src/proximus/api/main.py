@@ -13,12 +13,17 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from proximus.config import get_settings
 from proximus.context import CallManager, CallRecord, Resume, ResumeManager
 
 # Paths reachable without an API key (health checks, interactive docs).
 PUBLIC_PATHS = {"/health", "/docs", "/redoc", "/openapi.json"}
+
+# Maximum accepted resume upload size (bytes). Guards against memory-exhaustion
+# / DoS via oversized uploads.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 async def verify_api_key(
@@ -276,19 +281,32 @@ async def upload_resume(
             detail=f"Unsupported file type: {suffix}. Supported: .pdf, .docx, .txt",
         )
 
-    # Save to temp file for processing
+    # Stream to a temp file with a hard size cap — avoids buffering large uploads
+    # in memory and provides basic DoS protection.
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        shutil.copyfileobj(file.file, tmp)
         tmp_path = tmp.name
+        size = 0
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > MAX_UPLOAD_BYTES:
+                tmp.close()
+                Path(tmp_path).unlink(missing_ok=True)
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Resume file too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)",
+                )
+            tmp.write(chunk)
 
     try:
         manager = get_resume_manager()
-        resume = manager.parse_resume(tmp_path, candidate_name)
+        # Resume parsing (pdfplumber / python-docx) is blocking CPU/IO work —
+        # run it off the event loop so it doesn't stall other requests.
+        resume = await run_in_threadpool(manager.parse_resume, tmp_path, candidate_name)
 
         # Move to permanent storage
         storage_dir = manager.storage_dir
         permanent_path = storage_dir / f"{resume.id}{suffix}"
-        shutil.move(tmp_path, permanent_path)
+        await run_in_threadpool(shutil.move, tmp_path, str(permanent_path))
         resume.file_path = str(permanent_path)
 
         return UploadResponse(

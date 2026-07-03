@@ -3,7 +3,7 @@ name = "proximus"
 version = "0.1.0"
 description = "AI voice agent that handles incoming recruiter screening calls using candidate resume context"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
     # LiveKit voice agent
     "livekit-agents>=0.12",
@@ -47,7 +47,7 @@ build-backend = "hatchling.build"
 packages = ["src/proximus"]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py312"
 line-length = 100
 src = ["src"]
 
@@ -63,7 +63,7 @@ ignore = ["E501"]
 "src/proximus/api/main.py" = ["B008"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 # Third-party telephony/voice libs (livekit, etc.) ship without type stubs.
 ignore_missing_imports = true
 # Strict typing is a goal, not yet met across the legacy modules — tightening

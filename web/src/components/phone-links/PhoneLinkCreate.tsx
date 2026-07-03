@@ -7,6 +7,9 @@ interface Props {
   onCreated: () => void;
 }
 
+// Loose E.164 check: optional leading +, 7-15 digits, no leading zero.
+const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
+
 export function PhoneLinkCreate({ resumes, onCreated }: Props) {
   const [phone, setPhone] = useState('');
   const [resumeId, setResumeId] = useState('');
@@ -17,6 +20,11 @@ export function PhoneLinkCreate({ resumes, onCreated }: Props) {
     e.preventDefault();
     if (!phone || !resumeId) return;
     setError(null);
+    const normalized = phone.trim().replace(/[\s()-]/g, '');
+    if (!PHONE_RE.test(normalized)) {
+      setError('Enter a valid phone number in E.164 format, e.g. +12481234567');
+      return;
+    }
     setSaving(true);
     try {
       await createPhoneLink({ phone, resume_id: resumeId });

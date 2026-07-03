@@ -89,9 +89,13 @@ class ResumeManager:
             return
         try:
             data = _json.loads(path.read_text(encoding="utf-8"))
-            for rid, rd in data.get("resumes", {}).items():
-                self._resumes[rid] = Resume.from_dict(rd)
-            self._phone_to_resume = data.get("phone_links", {})
+            # Rebuild from disk rather than merging into the current dicts, so
+            # resumes/links removed elsewhere (e.g. via the API) don't linger in
+            # this process's in-memory state after a reload.
+            self._resumes = {
+                rid: Resume.from_dict(rd) for rid, rd in data.get("resumes", {}).items()
+            }
+            self._phone_to_resume = dict(data.get("phone_links", {}))
             _logger.info(
                 f"Loaded {len(self._resumes)} resumes, {len(self._phone_to_resume)} phone links from registry"
             )
