@@ -30,6 +30,7 @@ export function OutboundCallModal({ open, onClose }: Props) {
   const [participants, setParticipants] = useState<string[]>([]);
   const [elapsed, setElapsed] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState<{ role: string; text: string }[]>([]);
 
   const roomRef = useRef<Room | null>(null);
   const audioRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,7 @@ export function OutboundCallModal({ open, onClose }: Props) {
       setParticipants([]);
       setElapsed(0);
       setMuted(false);
+      setLiveTranscript([]);
     }
   }, [open]);
 
@@ -127,6 +129,19 @@ export function OutboundCallModal({ open, onClose }: Props) {
 
       room.on(RoomEvent.TrackSubscribed, (_track, publication) => {
         attachAudioTrack(publication);
+      });
+
+      // Live transcript turns published by the agent (topic "transcript").
+      room.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
+        if (topic !== 'transcript') return;
+        try {
+          const msg = JSON.parse(new TextDecoder().decode(payload));
+          if (msg?.type === 'transcript' && typeof msg.text === 'string') {
+            setLiveTranscript((prev) => [...prev, { role: msg.role, text: msg.text }]);
+          }
+        } catch {
+          /* ignore malformed data messages */
+        }
       });
 
       room.on(RoomEvent.ParticipantConnected, (participant) => {
@@ -354,6 +369,27 @@ export function OutboundCallModal({ open, onClose }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Live transcript */}
+              {liveTranscript.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs font-medium text-gray-500 uppercase mb-2">Live Transcript</p>
+                  <div className="max-h-40 space-y-1.5 overflow-y-auto">
+                    {liveTranscript.map((t, i) => (
+                      <p key={i} className="text-sm">
+                        <span
+                          className={`font-medium ${
+                            t.role === 'agent' ? 'text-indigo-600' : 'text-gray-700'
+                          }`}
+                        >
+                          {t.role === 'agent' ? 'Agent' : 'Recruiter'}:
+                        </span>{' '}
+                        <span className="text-gray-700">{t.text}</span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Controls */}
               <div className="flex items-center justify-center gap-4 pt-2">

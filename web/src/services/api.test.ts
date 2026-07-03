@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listResumes, createPhoneLink } from './api';
+import { listResumes, createPhoneLink, updateResumeVoice } from './api';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -34,5 +34,14 @@ describe('api request()', () => {
     expect(url).toBe('/api/phone-links');
     expect(options?.method).toBe('POST');
     expect(JSON.parse(options?.body as string)).toEqual({ phone: '+14155550100', resume_id: 'r1' });
+  });
+
+  it('PATCHes a resume voice', async () => {
+    const fetchSpy = mockFetch(200, { id: 'r1', voice: 'v-1' });
+    await updateResumeVoice('r1', 'v-1');
+    const [url, options] = fetchSpy.mock.calls[0];
+    expect(url).toBe('/api/resumes/r1');
+    expect(options?.method).toBe('PATCH');
+    expect(JSON.parse(options?.body as string)).toEqual({ voice: 'v-1' });
   });
 });
