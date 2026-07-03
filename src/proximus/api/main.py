@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 import shutil
 import tempfile
 from collections.abc import AsyncIterator
@@ -9,12 +10,37 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from proximus.config import get_settings
 from proximus.context import CallManager, CallRecord, Resume, ResumeManager
+
+# Paths reachable without an API key (health checks, interactive docs).
+PUBLIC_PATHS = {"/health", "/docs", "/redoc", "/openapi.json"}
+
+
+async def verify_api_key(
+    request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Require a matching X-API-Key header when an api_key is configured.
+
+    No-op for public paths, CORS preflight, and when no api_key is set (local dev).
+    Uses a constant-time comparison to avoid leaking the key via timing.
+    """
+    if request.method == "OPTIONS" or request.url.path in PUBLIC_PATHS:
+        return
+    configured = get_settings().api_key.get_secret_value()
+    if not configured:
+        return  # unauthenticated dev mode — see Settings.api_key
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+        )
+
 
 # Global manager instances
 _resume_manager: ResumeManager | None = None
@@ -53,6 +79,7 @@ def create_app() -> FastAPI:
         description="AI voice agent for handling recruiter screening calls",
         version="0.1.0",
         lifespan=lifespan,
+        dependencies=[Depends(verify_api_key)],
     )
     return application
 
@@ -243,10 +270,10 @@ async def upload_resume(
         raise HTTPException(status_code=400, detail="No filename provided")
 
     suffix = Path(file.filename).suffix.lower()
-    if suffix not in (".pdf", ".docx", ".doc", ".txt"):
+    if suffix not in (".pdf", ".docx", ".txt"):
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {suffix}. Supported: .pdf, .docx, .doc, .txt",
+            detail=f"Unsupported file type: {suffix}. Supported: .pdf, .docx, .txt",
         )
 
     # Save to temp file for processing
@@ -484,16 +511,29 @@ async def make_outbound_call(request: OutboundCallRequest) -> OutboundCallRespon
                     "caller_id override requires TELNYX_CREDENTIAL_CONNECTION_ID to be set in .env"
                 ),
             )
-        async with httpx.AsyncClient() as client:
-            await client.patch(
-                f"https://api.telnyx.com/v2/credential_connections/{connection_id}",
-                headers={
-                    "Authorization": f"Bearer KEY{settings.telnyx_api_key.get_secret_value()}"
-                },
-                json={
-                    "outbound": {"ani_override": request.caller_id, "ani_override_type": "always"}
-                },
-            )
+        # Telnyx v2 API keys already begin with "KEY"; don't double-prefix if the
+        # stored value already includes it (accept keys saved either way).
+        api_key = settings.telnyx_api_key.get_secret_value()
+        token = api_key if api_key.startswith("KEY") else f"KEY{api_key}"
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.patch(
+                    f"https://api.telnyx.com/v2/credential_connections/{connection_id}",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={
+                        "outbound": {
+                            "ani_override": request.caller_id,
+                            "ani_override_type": "always",
+                        }
+                    },
+                )
+            resp.raise_for_status()
+        except httpx.HTTPError as e:
+            # Don't place the call with an unset/incorrect caller ID — fail loudly.
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to set Telnyx caller ID (ANI) override: {e}",
+            ) from e
 
     try:
         result = await initiate_outbound_call(

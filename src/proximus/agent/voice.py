@@ -46,8 +46,8 @@ def get_llm():
     """Get the LLM plugin instance based on config."""
     settings = get_settings()
     if settings.ai_provider == "openai":
-        return openai.LLM(model="gpt-4o")
-    return anthropic.LLM(model="claude-sonnet-4-20250514")
+        return openai.LLM(model=settings.openai_model)
+    return anthropic.LLM(model=settings.anthropic_model)
 
 
 def extract_caller_phone(participant: rtc.RemoteParticipant) -> str | None:

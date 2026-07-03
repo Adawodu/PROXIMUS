@@ -9,11 +9,16 @@ import { useCalls } from '../hooks/useCalls';
 import { OutboundCallModal } from '../components/calls/OutboundCallModal';
 
 export function Dashboard() {
-  const { resumes } = useResumes();
-  const { links } = usePhoneLinks();
-  const { health } = useHealth();
-  const { calls } = useCalls();
+  const { resumes, loading: resumesLoading, error: resumesError } = useResumes();
+  const { links, loading: linksLoading, error: linksError } = usePhoneLinks();
+  const { health, error: healthError } = useHealth();
+  const { calls, loading: callsLoading, error: callsError } = useCalls();
   const [showCallModal, setShowCallModal] = useState(false);
+
+  const errors = [resumesError, linksError, callsError].filter(Boolean) as string[];
+
+  // Show a dash while a count is still loading rather than a misleading 0.
+  const count = (isLoading: boolean, n: number) => (isLoading ? '—' : n);
 
   return (
     <div className="space-y-6">
@@ -27,11 +32,20 @@ export function Dashboard() {
         </button>
       </div>
 
+      {errors.length > 0 && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          Failed to load dashboard data: {errors.join('; ')}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <StatusCard title="Resumes" value={resumes.length} icon={DocumentTextIcon} color="bg-indigo-600" />
-        <StatusCard title="Phone Links" value={links.length} icon={PhoneIcon} color="bg-emerald-600" />
-        <StatusCard title="Total Calls" value={calls.length} icon={PhoneIcon} color="bg-purple-600" />
-        <StatusCard title="API Status" value={health ? 'Healthy' : 'Offline'} icon={SignalIcon} color={health ? 'bg-green-600' : 'bg-red-600'} />
+        <StatusCard title="Resumes" value={count(resumesLoading, resumes.length)} icon={DocumentTextIcon} color="bg-indigo-600" />
+        <StatusCard title="Phone Links" value={count(linksLoading, links.length)} icon={PhoneIcon} color="bg-emerald-600" />
+        <StatusCard title="Total Calls" value={count(callsLoading, calls.length)} icon={PhoneIcon} color="bg-purple-600" />
+        <StatusCard title="API Status" value={healthError ? 'Offline' : health ? 'Healthy' : '…'} icon={SignalIcon} color={health && !healthError ? 'bg-green-600' : 'bg-red-600'} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
