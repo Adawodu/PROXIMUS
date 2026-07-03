@@ -1,0 +1,35 @@
+# PROXIMUS local stack: REST API + voice agent + web dashboard.
+#
+#   cp .env.example .env   # then fill in your keys
+#   docker compose up --build
+#
+# Dashboard: http://localhost:8080   API: http://localhost:8000
+services:
+  api:
+    build: .
+    command: python -m proximus api
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist SQLite databases + uploaded resume files across restarts.
+      - ./data:/app/data
+    restart: unless-stopped
+
+  agent:
+    build: .
+    command: python -m proximus agent start
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
