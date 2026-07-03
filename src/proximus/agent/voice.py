@@ -174,6 +174,21 @@ async def handle_call(ctx: agents.JobContext):
 
     logger.info(f"New call connected: room={ctx.room.name}")
 
+    # Event loop captured so the (sync) transcript callback can schedule the
+    # live-transcript data publish safely from any thread.
+    loop = asyncio.get_running_loop()
+
+    async def _publish_transcript_turn(role: str, text: str) -> None:
+        """Publish a transcript turn to the room as data (best-effort).
+
+        Never raises — a publish failure must not affect the call.
+        """
+        try:
+            payload = json.dumps({"type": "transcript", "role": role, "text": text}).encode()
+            await ctx.room.local_participant.publish_data(payload, topic="transcript")
+        except Exception as exc:  # noqa: BLE001 — live transcript is best-effort
+            logger.debug(f"Live transcript publish failed: {exc}")
+
     # Determine call direction from room name and metadata
     direction = "outbound" if ctx.room.name.startswith("proximus-outbound-") else "inbound"
     target_phone: str | None = None
@@ -232,14 +247,20 @@ async def handle_call(ctx: agents.JobContext):
         if not text or not text.strip():
             return
         role = "agent" if item.role == "assistant" else "user"
+        clean = text.strip()
         transcript.append(
             CallTranscriptEntry(
                 role=role,
-                text=text.strip(),
+                text=clean,
                 timestamp=time.time(),
             )
         )
-        logger.debug(f"[transcript] {role}: {text.strip()}")
+        logger.debug(f"[transcript] {role}: {clean}")
+        # Stream the turn to any dashboard listeners in the room (best-effort).
+        try:
+            asyncio.run_coroutine_threadsafe(_publish_transcript_turn(role, clean), loop)
+        except Exception as exc:  # noqa: BLE001 — never let streaming break capture
+            logger.debug(f"Live transcript scheduling failed: {exc}")
 
     @session.on("close")
     def _on_close(*args):

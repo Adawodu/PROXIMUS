@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import type { Resume } from '../../types';
-import { getResumeContext, getResumePhones } from '../../services/api';
+import { getResumeContext, getResumePhones, updateResumeVoice } from '../../services/api';
 
 interface Props {
   resume: Resume;
@@ -13,6 +13,22 @@ export function ResumeDetailModal({ resume, onClose }: Props) {
   const [systemPrompt, setSystemPrompt] = useState('');
   const [phones, setPhones] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [voice, setVoice] = useState(resume.voice ?? '');
+  const [savingVoice, setSavingVoice] = useState(false);
+  const [voiceSaved, setVoiceSaved] = useState(false);
+
+  const handleSaveVoice = async () => {
+    setSavingVoice(true);
+    setVoiceSaved(false);
+    try {
+      await updateResumeVoice(resume.id, voice.trim());
+      setVoiceSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save voice');
+    } finally {
+      setSavingVoice(false);
+    }
+  };
 
   useEffect(() => {
     setError(null);
@@ -81,13 +97,35 @@ export function ResumeDetailModal({ resume, onClose }: Props) {
           )}
         </div>
 
-        {phones.length > 0 && (
-          <div className="border-t px-6 py-3">
-            <p className="text-xs text-gray-500">
-              Linked phones: {phones.join(', ')}
-            </p>
+        <div className="border-t px-6 py-3 space-y-2">
+          <label htmlFor="tts-voice" className="block text-xs font-medium text-gray-500 uppercase">
+            TTS Voice (Cartesia voice id)
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="tts-voice"
+              type="text"
+              value={voice}
+              onChange={(e) => {
+                setVoice(e.target.value);
+                setVoiceSaved(false);
+              }}
+              placeholder="Leave blank for the default voice"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleSaveVoice}
+              disabled={savingVoice}
+              className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingVoice ? 'Saving...' : 'Save'}
+            </button>
           </div>
-        )}
+          {voiceSaved && <p className="text-xs text-emerald-600">Voice saved.</p>}
+          {phones.length > 0 && (
+            <p className="text-xs text-gray-500">Linked phones: {phones.join(', ')}</p>
+          )}
+        </div>
       </div>
     </div>
   );

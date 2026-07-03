@@ -49,6 +49,13 @@ export const getResumeContext = (id: string) =>
 export const getResumePhones = (id: string) =>
   request<{ phones: string[] }>(`/resumes/${id}/phones`);
 
+export const updateResumeVoice = (id: string, voice: string) =>
+  request<Resume>(`/resumes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ voice }),
+  });
+
 // Phone Links
 export const listPhoneLinks = () => request<PhoneLinksResponse>('/phone-links');
 
