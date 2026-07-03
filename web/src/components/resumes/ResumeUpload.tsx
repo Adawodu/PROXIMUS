@@ -6,6 +6,9 @@ interface Props {
   onUploaded: () => void;
 }
 
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // keep in sync with the API
+
 export function ResumeUpload({ onUploaded }: Props) {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -15,6 +18,15 @@ export function ResumeUpload({ onUploaded }: Props) {
 
   const handleFile = async (file: File) => {
     setError(null);
+    const name = file.name.toLowerCase();
+    if (!ALLOWED_EXTENSIONS.some((ext) => name.endsWith(ext))) {
+      setError('Unsupported file type. Use PDF, DOCX, or TXT.');
+      return;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError('File too large (max 10 MB).');
+      return;
+    }
     setUploading(true);
     try {
       await uploadResume(file, candidateName || undefined);
@@ -63,7 +75,7 @@ export function ResumeUpload({ onUploaded }: Props) {
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.doc,.txt"
+        accept=".pdf,.docx,.txt"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];

@@ -59,7 +59,7 @@ export function CallHistory() {
           <p className="text-sm text-gray-500 mt-1">View transcripts from past calls</p>
         </div>
         <button
-          onClick={refresh}
+          onClick={() => refresh()}
           className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
         >
           Refresh

@@ -271,7 +271,8 @@ async def handle_call(ctx: agents.JobContext):
         await session.generate_reply(
             instructions=(
                 f"You are {resume.candidate_name} and you are calling a recruiter. "
-                "Say hello briefly - for example 'Hi, this is {name}, I'm returning your call about the role you reached out about.' "
+                f'Say hello briefly - for example "Hi, this is {resume.candidate_name}, '
+                "I'm returning your call about the role you reached out about.\" "
                 "Keep it short and natural, then let them lead the conversation."
             )
         )
