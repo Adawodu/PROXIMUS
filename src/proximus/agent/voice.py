@@ -119,6 +119,18 @@ def resolve_resume(ctx: agents.JobContext) -> Resume:
     3. First available resume (fallback for testing)
     4. Default empty resume
     """
+    # Priority 0: governed Proof-of-Me persona (opt-in). Overrides everything so the twin
+    # only ever speaks from the curated, guardrailed export — never a raw resume.
+    gp = get_settings().governed_persona_path
+    if gp:
+        from proximus.context.governed import load_governed_resume
+        try:
+            resume = load_governed_resume(gp)
+            logger.info(f"Using governed Proof-of-Me persona: {resume.candidate_name}")
+            return resume
+        except Exception as exc:  # never break a call on a bad path — fall through
+            logger.error(f"Governed persona load failed ({gp}): {exc}")
+
     resume_manager = get_resume_manager()
     # Reload from disk so we pick up resumes added via the API
     resume_manager._load_registry()

@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-haiku-4-5"
     openai_model: str = "gpt-4o"
 
+    # Governed persona (Proof-of-Me). When set to a proof-export.json path, every call uses
+    # the curated, guardrailed voice twin instead of raw-resume resolution. Empty = off.
+    governed_persona_path: str = ""
+
     # Speech Services
     deepgram_api_key: SecretStr = SecretStr("")
     cartesia_api_key: SecretStr = SecretStr("")
