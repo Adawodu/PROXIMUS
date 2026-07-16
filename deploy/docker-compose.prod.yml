@@ -1,0 +1,66 @@
+# PROXIMUS production stack for a single cloud VM.
+#
+#   Dashboard:  https://proximus.jonnymate.com  (Caddy -> web -> api)
+#   Telephony:  the agent connects OUTBOUND to LiveKit Cloud; no inbound
+#               media ports are needed. Only 80/443 must be open.
+#
+# Prereqs on the VM:
+#   - Docker + docker compose plugin
+#   - This repo checked out; a filled-in .env in the repo root
+#   - DNS A record proximus.jonnymate.com -> this VM's static IP
+#
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+#
+# API_KEY (from .env) drives BOTH the backend auth and the dashboard's baked-in
+# key, so the two always match.
+services:
+  api:
+    build: ..
+    command: python -m proximus api
+    env_file: ../.env
+    expose:
+      - "8000"          # internal only — reached by web (nginx) over the compose network
+    volumes:
+      - ../data:/app/data
+    restart: unless-stopped
+
+  agent:
+    build: ..
+    command: python -m proximus agent start
+    env_file: ../.env
+    volumes:
+      - ../data:/app/data
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../web
+      args:
+        # Same-origin: the browser calls /api, nginx proxies to api:8000.
+        VITE_API_BASE_URL: "/api"
+        # Bake the API key into the bundle so the dashboard can auth to the API.
+        VITE_API_KEY: "${API_KEY}"
+    expose:
+      - "80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:
