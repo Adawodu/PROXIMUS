@@ -15,7 +15,14 @@ import type {
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, options);
+  // Optional API key for a key-protected backend (see Settings.api_key), injected
+  // at build time via VITE_API_KEY. When unset (local dev), requests are sent
+  // unchanged so options stays `undefined` for header-less GETs.
+  const apiKey = import.meta.env.VITE_API_KEY || '';
+  const opts = apiKey
+    ? { ...options, headers: { ...options?.headers, 'X-API-Key': apiKey } }
+    : options;
+  const response = await fetch(`${BASE_URL}${path}`, opts);
   if (!response.ok) {
     const body = await response.json().catch(() => ({ detail: response.statusText }));
     throw new Error(body.detail || response.statusText);
