@@ -1,0 +1,20 @@
+# Caddy reverse proxy for the PROXIMUS dashboard.
+# Automatic HTTPS via Let's Encrypt once DNS for the domain points at this host.
+proximus.jonnymate.com {
+	# The web container (nginx) serves the SPA and proxies /api -> api:8000.
+	reverse_proxy web:80
+
+	# Optional: gate the whole dashboard behind HTTP basic auth. The API key is
+	# embedded in the client bundle, so this is the real access control for a
+	# public deployment. Generate a hash with:
+	#   docker run --rm caddy caddy hash-password --plaintext 'your-password'
+	# then uncomment and paste it below.
+	# basic_auth {
+	# 	bayo <bcrypt-hash>
+	# }
+
+	encode gzip
+	log {
+		output stdout
+	}
+}
