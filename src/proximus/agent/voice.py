@@ -124,6 +124,7 @@ def resolve_resume(ctx: agents.JobContext) -> Resume:
     gp = get_settings().governed_persona_path
     if gp:
         from proximus.context.governed import load_governed_resume
+
         try:
             resume = load_governed_resume(gp)
             logger.info(f"Using governed Proof-of-Me persona: {resume.candidate_name}")
