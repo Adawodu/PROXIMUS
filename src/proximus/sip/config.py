@@ -37,12 +37,17 @@ class DispatchRuleConfig:
     metadata: dict | None = None
 
 
-# Telnyx IP ranges for SIP (for trunk allowed_addresses)
-# See: https://support.telnyx.com/en/articles/4455513-telnyx-sip-signaling-ip-addresses
+# Telnyx SIP *signaling* IP ranges (for inbound-trunk allowed_addresses).
+# These are the source IPs Telnyx sends SIP from; the authoritative, machine-
+# readable list lives at https://sip.telnyx.com/voice.json (all regions covered
+# here with /24 headroom for failover).
 TELNYX_SIP_IPS = [
-    "54.172.60.0/23",  # US East
-    "54.244.51.0/24",  # US West
-    "52.215.127.0/24",  # EU
+    "192.76.120.0/24",  # US / CA / UAC signaling
+    "64.16.250.0/24",  # US / CA signaling (secondary)
+    "185.246.41.128/25",  # EU signaling
+    "185.246.42.128/28",  # Middle East signaling
+    "103.115.244.128/25",  # AU / AP signaling
+    "103.115.247.128/27",  # AP signaling
 ]
 
 

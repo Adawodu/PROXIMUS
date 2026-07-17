@@ -60,3 +60,6 @@ Thumbs.db
 # Node
 web/node_modules/
 web/dist/
+
+# Personal promotion notes (not for the public repo)
+PROMOTION.md
